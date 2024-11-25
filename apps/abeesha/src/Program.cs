@@ -29,8 +29,12 @@ builder.Services.AddCors(builder =>
         }
     );
 });
-builder.Services.AddDbContext<AbeeshaDbContext>(opt =>
-    opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+builder.Services.AddDbContext<AbeeshaDbContext>(
+    (serviceProvider, opt) =>
+    {
+        var connectionString = Environment.GetEnvironmentVariable("DB_URL");
+        opt.UseNpgsql(connectionString);
+    }
 );
 builder.Services.AddApiAuthentication();
 var app = builder.Build();
@@ -56,6 +60,11 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapControllers();
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AbeeshaDbContext>();
+    db.Database.Migrate();
+}
 app.UseApiAuthentication();
 using (var scope = app.Services.CreateScope())
 {
